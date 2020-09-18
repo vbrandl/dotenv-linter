@@ -33,6 +33,14 @@ fn main() -> Result<(), Box<dyn Error>> {
 
             process::exit(0);
         }
+        ("compare", Some(files)) => {
+            if let Ok(warnings) = dotenv_linter::compare(&files, &current_dir) {
+                for warning in warnings {
+                    println!("{}", warning);
+                    process::exit(1);
+                }
+            }
+        }
         _ => {
             eprintln!("unknown command");
         }
@@ -70,6 +78,19 @@ fn get_args(current_dir: &OsStr) -> clap::ArgMatches {
                 )
                 .usage("dotenv-linter fix [FLAGS] [OPTIONS] <input>...")
                 .about("Automatically fixes warnings"),
+        )
+        .subcommand(
+            SubCommand::with_name("compare")
+                .setting(AppSettings::ColoredHelp)
+                .visible_alias("c")
+                .arg(
+                    Arg::with_name("files")
+                        .help("Files to compare")
+                        .multiple(true)
+                        .required(true),
+                )
+                .about("Compares if files have the same keys")
+                .usage("dotenv_linter compare <files>"),
         )
         .get_matches()
 }

@@ -1,5 +1,6 @@
 use crate::common::*;
 use std::collections::BTreeMap;
+use std::collections::HashSet;
 use std::error::Error;
 use std::path::PathBuf;
 
@@ -133,6 +134,76 @@ fn get_needed_file_paths(args: &clap::ArgMatches) -> Vec<PathBuf> {
     }
 
     file_paths
+}
+
+// A structure used to compare environment files
+#[derive(Debug)]
+struct CompareFileType {
+    pub path: PathBuf,
+    pub keys: Vec<String>,
+}
+
+// Compares if different environment files contains the same variables and
+// returns warnings if not
+pub fn compare(
+    args: &clap::ArgMatches,
+    current_dir: &PathBuf,
+) -> Result<Vec<String>, Box<dyn Error>> {
+    let mut warnings: Vec<String> = Vec::new();
+    let mut file_paths: Vec<PathBuf> = Vec::new();
+    let mut files_to_compare: Vec<CompareFileType> = Vec::new();
+    let mut all_keys: HashSet<String> = vec![].into_iter().collect();
+
+    // determine which files to compare
+    if let Some(inputs) = args.values_of("files") {
+        file_paths = inputs
+            .filter_map(|f| fs_utils::canonicalize(f).ok())
+            .collect();
+    }
+
+    // create CompareFileType structures for each file
+    for path in file_paths {
+        let mut keys: Vec<String> = Vec::new();
+        let relative_path = match fs_utils::get_relative_path(&path, &current_dir) {
+            Some(p) => p,
+            None => continue,
+        };
+
+        let (fe, strs) = match FileEntry::from(relative_path.clone()) {
+            Some(f) => f,
+            None => continue,
+        };
+
+        for line in get_line_entries(&fe, strs) {
+            if let Some(key) = line.get_key() {
+                all_keys.insert(key.clone());
+                keys.push(key)
+            }
+        }
+
+        let file_to_compare: CompareFileType = CompareFileType {
+            path: relative_path,
+            keys,
+        };
+
+        files_to_compare.push(file_to_compare);
+    }
+
+    // create warnings if any file misses any key
+    for file in files_to_compare {
+        // copy all keys
+        let mut missing_keys = all_keys.clone();
+        missing_keys.retain(|key| !file.keys.contains(key));
+
+        if !missing_keys.is_empty() {
+            warnings.push(format!(
+                "file: {:?} is missing keys: {:?}",
+                file.path, missing_keys
+            ))
+        }
+    }
+
+    Ok(warnings)
 }
 
 fn get_file_paths(

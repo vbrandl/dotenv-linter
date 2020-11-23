@@ -145,7 +145,7 @@ pub fn compare(
     let mut warnings: Vec<String> = Vec::new();
     let mut file_paths: Vec<PathBuf> = Vec::new();
     let mut files_to_compare: Vec<CompareFileType> = Vec::new();
-    let mut all_keys: HashSet<String> = vec![].into_iter().collect();
+    let mut all_keys: HashSet<String> = HashSet::new();
 
     // determine which files to compare
     if let Some(inputs) = args.values_of("files") {
@@ -184,9 +184,10 @@ pub fn compare(
 
     // create warnings if any file misses any key
     for file in files_to_compare {
-        // copy all keys
-        let mut missing_keys = all_keys.clone();
-        missing_keys.retain(|key| !file.keys.contains(key));
+        let missing_keys: Vec<_> = all_keys
+            .iter()
+            .filter(|key| !file.keys.contains(key))
+            .collect();
 
         if !missing_keys.is_empty() {
             warnings.push(format!(

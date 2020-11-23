@@ -35,9 +35,12 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
         ("compare", Some(files)) => {
             if let Ok(warnings) = dotenv_linter::compare(&files, &current_dir) {
-                for warning in warnings {
+                for warning in warnings.clone() {
                     println!("{}", warning);
-                    process::exit(1);
+                }
+
+                if warnings.is_empty() {
+                    process::exit(0);
                 }
             }
         }

@@ -87,10 +87,11 @@ fn get_args(current_dir: &OsStr) -> clap::ArgMatches {
                     Arg::with_name("files")
                         .help("Files to compare")
                         .multiple(true)
+                        .min_values(2)
                         .required(true),
                 )
                 .about("Compares if files have the same keys")
-                .usage("dotenv_linter compare <files>"),
+                .usage("dotenv-linter compare <files>..."),
         )
         .get_matches()
 }

@@ -136,13 +136,6 @@ fn get_needed_file_paths(args: &clap::ArgMatches) -> Vec<PathBuf> {
     file_paths
 }
 
-// A structure used to compare environment files
-#[derive(Debug)]
-struct CompareFileType {
-    pub path: PathBuf,
-    pub keys: Vec<String>,
-}
-
 // Compares if different environment files contains the same variables and
 // returns warnings if not
 pub fn compare(

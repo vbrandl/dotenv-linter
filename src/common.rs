@@ -1,10 +1,12 @@
 pub(crate) mod comment;
+mod compare;
 mod file_entry;
 mod line_entry;
 pub(crate) mod output;
 mod warning;
 
 use colored::*;
+pub use compare::CompareFileType;
 pub use file_entry::FileEntry;
 pub use line_entry::LineEntry;
 pub use output::check::CheckOutput;

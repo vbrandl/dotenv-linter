@@ -10,7 +10,9 @@ pub use compare::CompareFileType;
 pub use file_entry::FileEntry;
 pub use line_entry::LineEntry;
 pub use output::check::CheckOutput;
+pub use output::compare::CompareOutput;
 pub use output::fix::FixOutput;
+pub use warning::CompareWarning;
 pub use warning::Warning;
 
 pub const LF: &str = "\n";

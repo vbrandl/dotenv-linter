@@ -1,6 +1,27 @@
 use std::fmt;
+use std::path::PathBuf;
 
 use crate::common::*;
+
+#[derive(Debug)]
+pub struct CompareWarning {
+    pub path: PathBuf,
+    pub missing_keys: Vec<String>,
+}
+
+impl CompareWarning {
+    pub fn as_str(&self) -> String {
+        format!(
+            "{:?} is missing keys: {:?}",
+            self.path,
+            self.missing_keys
+                .clone()
+                .into_iter()
+                .collect::<Vec<_>>()
+                .join(", ")
+        )
+    }
+}
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Warning {

@@ -10,6 +10,7 @@ mod fixes;
 mod fs_utils;
 
 pub use checks::available_check_names;
+use common::CompareWarning;
 
 pub fn check(args: &clap::ArgMatches, current_dir: &PathBuf) -> Result<usize, Box<dyn Error>> {
     let mut warnings_count = 0;
@@ -142,32 +143,25 @@ pub fn compare(
     args: &clap::ArgMatches,
     current_dir: &PathBuf,
 ) -> Result<Vec<String>, Box<dyn Error>> {
-    let mut warnings: Vec<String> = Vec::new();
-    let mut file_paths: Vec<PathBuf> = Vec::new();
-    let mut files_to_compare: Vec<CompareFileType> = Vec::new();
     let mut all_keys: HashSet<String> = HashSet::new();
+    let lines_map = get_lines(args, current_dir)?;
+    let output = CompareOutput::new(args.is_present("quiet"));
 
-    // determine which files to compare
-    if let Some(inputs) = args.values_of("files") {
-        file_paths = inputs
-            .filter_map(|f| fs_utils::canonicalize(f).ok())
-            .collect();
+    let mut warnings: Vec<CompareWarning> = Vec::new();
+    let mut files_to_compare: Vec<CompareFileType> = Vec::new();
+
+    // Nothing to check
+    if lines_map.is_empty() {
+        return Ok(warnings.iter().map(|w| w.as_str()).collect());
     }
 
-    // create CompareFileType structures for each file
-    for path in file_paths {
+    // // create CompareFileType structures for each file
+    for (_, (fe, strings)) in lines_map.into_iter().enumerate() {
+        output.print_processing_info(&fe);
+        let lines = get_line_entries(&fe, strings);
         let mut keys: Vec<String> = Vec::new();
-        let relative_path = match fs_utils::get_relative_path(&path, &current_dir) {
-            Some(p) => p,
-            None => continue,
-        };
 
-        let (fe, strs) = match FileEntry::from(relative_path.clone()) {
-            Some(f) => f,
-            None => continue,
-        };
-
-        for line in get_line_entries(&fe, strs) {
+        for line in lines {
             if let Some(key) = line.get_key() {
                 all_keys.insert(key.clone());
                 keys.push(key)
@@ -175,8 +169,9 @@ pub fn compare(
         }
 
         let file_to_compare: CompareFileType = CompareFileType {
-            path: relative_path,
+            path: fe.path,
             keys,
+            missing: Vec::new(),
         };
 
         files_to_compare.push(file_to_compare);
@@ -190,14 +185,17 @@ pub fn compare(
             .collect();
 
         if !missing_keys.is_empty() {
-            warnings.push(format!(
-                "file: {:?} is missing keys: {:?}",
-                file.path, missing_keys
-            ))
+            let warning = CompareWarning {
+                path: file.path,
+                missing_keys: missing_keys.iter().map(|k| k.to_string()).collect(),
+            };
+
+            warnings.push(warning)
         }
     }
 
-    Ok(warnings)
+    output.print_warnings(&warnings);
+    Ok(warnings.iter().map(|w| w.as_str()).collect())
 }
 
 fn get_file_paths(

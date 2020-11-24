@@ -3,6 +3,13 @@ use std::error::Error;
 use std::ffi::OsStr;
 use std::{env, process};
 
+fn quiet_flag() -> clap::Arg<'static, 'static> {
+    Arg::with_name("quiet")
+        .short("q")
+        .long("quiet")
+        .help("Doesn't display additional information")
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
     #[cfg(windows)]
     colored::control::set_virtual_terminal(true).ok();
@@ -35,10 +42,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
         ("compare", Some(files)) => {
             if let Ok(warnings) = dotenv_linter::compare(&files, &current_dir) {
-                for warning in warnings.clone() {
-                    println!("{}", warning);
-                }
-
                 if warnings.is_empty() {
                     process::exit(0);
                 }
@@ -86,13 +89,14 @@ fn get_args(current_dir: &OsStr) -> clap::ArgMatches {
             SubCommand::with_name("compare")
                 .setting(AppSettings::ColoredHelp)
                 .visible_alias("c")
-                .arg(
-                    Arg::with_name("files")
+                .args(&vec![
+                    Arg::with_name("input")
                         .help("Files to compare")
                         .multiple(true)
                         .min_values(2)
                         .required(true),
-                )
+                    quiet_flag(),
+                ])
                 .about("Compares if files have the same keys")
                 .usage("dotenv-linter compare <files>..."),
         )
@@ -128,9 +132,6 @@ fn common_args(current_dir: &OsStr) -> Vec<Arg> {
         Arg::with_name("no-color")
             .long("no-color")
             .help("Turns off the colored output"),
-        Arg::with_name("quiet")
-            .short("q")
-            .long("quiet")
-            .help("Doesn't display additional information"),
+        quiet_flag(),
     ]
 }
